@@ -1,5 +1,11 @@
 # 🎯 Underground Neon KL: Mamak Alleyway Siege
 
+> **⚠️ Server/tunnel are managed automatically.** A watchdog (Hermes cron, every 5 min)
+> keeps the Vite dev server (port 5180) and the public tunnel
+> (https://klmamakfps.loophole.site) alive. **Do not run `npm run dev` or any tunnel
+> command** — edit files instead (Vite hot-reloads instantly). See `GEMINI.md` section 0.
+
+
 [![Three.js](https://img.shields.io/badge/Three.js-r160+-black?style=for-the-badge&logo=three.js)](https://threejs.org/)
 [![WebGL](https://img.shields.io/badge/WebGL-2.0%20Custom%20Shaders-990000?style=for-the-badge&logo=webgl)](https://www.khronos.org/webgl/)
 [![Vite](https://img.shields.io/badge/Vite-5.0+-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev/)

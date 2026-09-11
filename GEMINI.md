@@ -6,6 +6,28 @@ This document provides complete architectural context, design invariants, codeba
 
 ---
 
+## 🚫 0. DO NOT START THE DEV SERVER OR THE TUNNEL (READ FIRST)
+
+**The app and its public tunnel are managed externally by an automated watchdog. Never start them yourself.**
+
+| Process | Command you must NOT run | Why |
+|---|---|---|
+| Dev server | `npm run dev`, `npx vite`, `vite` | The watchdog already runs it on **port 5180**; `vite.config.js` uses `strictPort: true`, so a second instance fails with "Port 5180 is already in use" and makes it look like the app is broken. |
+| Public tunnel | `loophole http ...`, any tunnel command | The watchdog owns the tunnel. Extra restarts trigger new Let's Encrypt certificate requests for the hostname; 5 duplicate certs/week causes a lockout and the public URL dies for days. |
+
+### Correct way to work on this project
+
+- **Edit source files only** (`src/**`, `index.html`, `public/**`, `vite.config.js`). The running Vite dev server **hot-reloads instantly** — no restart needed. Save the file, refresh the browser.
+- **Test the game at the live URL**: **https://klmamakfps.loophole.site** (or `http://localhost:5180` from inside the box).
+- **Verify the server is alive** (read-only, always safe): `curl -s -o /dev/null -w "%{http_code}" http://localhost:5180/` → expect `200`.
+- **If port 5180 does not answer**: report it to the user and stop. Do not start a server on another port — the tunnel only forwards 5180.
+- **Do not run `npm install`** unless explicitly asked; dependencies are already installed.
+- If you truly need a server for an isolated test, use a **different port** (e.g. `npx vite --port 5199`), and kill it when done.
+
+> Rationale: the watchdog (Hermes cron, every 5 minutes) restarts the dev server and tunnel automatically if they die. A second manually-started process fights it, wastes Let's Encrypt quota, and can take the public site down.
+
+---
+
 ## 📌 1. Project Vision & Identity
 
 - **Title**: *Underground Neon KL: Mamak Alleyway Siege*
