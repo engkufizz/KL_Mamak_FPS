@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#040608" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Underground Neon KL: Mamak Alleyway Siege</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-touch-callout: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #040608;
+      font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      overscroll-behavior: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* Orientation Advisory Overlay for Mobile */
+    #orientation-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle, #0e1622 0%, #05080c 100%);
+      z-index: 99999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #00ffcc;
+      text-align: center;
+      padding: 24px;
+      font-family: 'Rajdhani', sans-serif;
+    }
+    .rotate-icon {
+      font-size: 64px;
+      animation: rotatePhone 2.2s infinite ease-in-out;
+      margin-bottom: 20px;
+      display: inline-block;
+      filter: drop-shadow(0 0 16px #00ffcc);
+    }
+    @keyframes rotatePhone {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(90deg); }
+      100% { transform: rotate(90deg); }
+    }
+    .rotate-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #00ffcc;
+      margin-bottom: 8px;
+    }
+    .rotate-sub {
+      font-size: 15px;
+      color: #ffaa00;
+      letter-spacing: 1px;
+      max-width: 320px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

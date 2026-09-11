@@ -1,0 +1,18 @@
+{
+  "name": "Underground Neon KL: Mamak Alleyway Siege",
+  "short_name": "KL Mamak FPS",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#040608",
+  "theme_color": "#040608",
+  "description": "High-octane browser FPS horde survival shooter set in nocturnal Kuala Lumpur.",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
