@@ -106,16 +106,40 @@ export class PickupManager {
       const dist = p.mesh.position.distanceTo(playerPos);
       if (dist < pickupDist) {
         this.collectPickup(p);
+        this.disposePickupMesh(p.mesh);
         this.scene.remove(p.mesh);
         this.pickups.splice(i, 1);
         continue;
       }
 
       if (p.timer <= 0) {
+        this.disposePickupMesh(p.mesh);
         this.scene.remove(p.mesh);
         this.pickups.splice(i, 1);
       }
     }
+  }
+
+  disposePickupMesh(meshGroup) {
+    if (!meshGroup) return;
+    meshGroup.traverse((child) => {
+      if (child.geometry) child.geometry.dispose();
+      // Dispose unique materials (like the cross or crate detail), keep shared ones
+      if (child.material &&
+          child.material !== this.healthMat &&
+          child.material !== this.ammoMat &&
+          child.material !== this.crateMat) {
+        child.material.dispose();
+      }
+    });
+  }
+
+  reset() {
+    for (const p of this.pickups) {
+      this.disposePickupMesh(p.mesh);
+      this.scene.remove(p.mesh);
+    }
+    this.pickups = [];
   }
 
   collectPickup(pickup) {

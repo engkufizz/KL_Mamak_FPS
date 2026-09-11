@@ -109,6 +109,8 @@ export class PropManager {
     this.props.push({
       mesh: tableMesh,
       type: 'table',
+      initialPosition: tableMesh.position.clone(),
+      initialRotation: tableMesh.rotation.clone(),
       velocity: new THREE.Vector3(),
       angularVelocity: new THREE.Vector3(),
       mass: 8.0,
@@ -139,6 +141,8 @@ export class PropManager {
     this.props.push({
       mesh: stoolMesh,
       type: 'stool',
+      initialPosition: stoolMesh.position.clone(),
+      initialRotation: stoolMesh.rotation.clone(),
       velocity: new THREE.Vector3(),
       angularVelocity: new THREE.Vector3(),
       mass: 2.2,
@@ -255,6 +259,20 @@ export class PropManager {
       // Arena boundary collision clamp
       prop.mesh.position.x = Math.max(-15.0, Math.min(15.0, prop.mesh.position.x));
       prop.mesh.position.z = Math.max(-23.0, Math.min(23.0, prop.mesh.position.z));
+    }
+  }
+
+  reset() {
+    for (const prop of this.props) {
+      if (prop.initialPosition) {
+        prop.mesh.position.copy(prop.initialPosition);
+      }
+      if (prop.initialRotation) {
+        prop.mesh.rotation.copy(prop.initialRotation);
+      }
+      prop.velocity.set(0, 0, 0);
+      prop.angularVelocity.set(0, 0, 0);
+      prop.isGrounded = true;
     }
   }
 }

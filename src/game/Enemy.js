@@ -461,4 +461,17 @@ export class Enemy {
 
     return true;
   }
+
+  dispose() {
+    this.mesh.traverse((child) => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(m => m.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+    });
+  }
 }

@@ -13,6 +13,7 @@ export class AudioManager {
     this.rainGain = null;
     this.heartbeatOsc = null;
     this.heartbeatGain = null;
+    this.noiseBuffers = new Map();
     this.initialized = false;
   }
 
@@ -44,15 +45,20 @@ export class AudioManager {
     }
   }
 
-  // Generate white noise audio buffer
+  // Generate white noise audio buffer (with caching to avoid runtime allocations)
   createNoiseBuffer(duration = 1.0) {
     if (!this.ctx) return null;
+    const durKey = Math.round(duration * 100) / 100;
+    if (this.noiseBuffers.has(durKey)) {
+      return this.noiseBuffers.get(durKey);
+    }
     const bufferSize = Math.floor(this.ctx.sampleRate * duration);
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
       data[i] = Math.random() * 2 - 1;
     }
+    this.noiseBuffers.set(durKey, buffer);
     return buffer;
   }
 

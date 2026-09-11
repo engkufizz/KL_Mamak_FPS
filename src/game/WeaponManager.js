@@ -13,10 +13,14 @@ export class WeaponManager {
     this.viewmodelRig = new THREE.Group();
     this.camera.add(this.viewmodelRig);
 
+    // Dedicated holder for weapon meshes so lights/rig children are not destroyed on switch
+    this.weaponMeshHolder = new THREE.Group();
+    this.viewmodelRig.add(this.weaponMeshHolder);
+
     // Subtle viewmodel key & rim light for crisp first-person weapon readability
-    const viewmodelLight = new THREE.PointLight(0xaad2ff, 1.4, 4.0, 1.5);
-    viewmodelLight.position.set(0.2, 0.3, -0.2);
-    this.viewmodelRig.add(viewmodelLight);
+    this.viewmodelLight = new THREE.PointLight(0xaad2ff, 1.4, 4.0, 1.5);
+    this.viewmodelLight.position.set(0.2, 0.3, -0.2);
+    this.viewmodelRig.add(this.viewmodelLight);
 
     // Weapon slots
     this.weapons = [];
@@ -24,6 +28,7 @@ export class WeaponManager {
     this.isADS = false;
     this.adsAlpha = 0.0; // 0 = Hip, 1 = ADS
     this.baseFov = 75;
+    this.lastEmptyClickTime = 0;
 
     // Procedural Sway & Lag Physics
     this.swayPos = new THREE.Vector2();
@@ -132,23 +137,28 @@ export class WeaponManager {
 
   equipSlot(slotIndex) {
     if (slotIndex < 0 || slotIndex >= this.weapons.length) return;
-    if (slotIndex === this.currentSlot && this.viewmodelRig.children.length > 0) return;
+    if (slotIndex === this.currentSlot && this.weaponMeshHolder.children.length > 0) return;
 
-    // Cancel reload on current weapon when switching
+    // Cancel reload & timeouts on current weapon when switching
     const prev = this.getActiveWeapon();
-    if (prev && prev.isReloading) {
-      prev.isReloading = false;
-      prev.reloadTimer = 0;
+    if (prev) {
+      if (prev.isReloading) {
+        prev.isReloading = false;
+        prev.reloadTimer = 0;
+      }
+      if (typeof prev.cancelActions === 'function') {
+        prev.cancelActions();
+      }
     }
 
-    // Remove existing weapon mesh
-    while (this.viewmodelRig.children.length > 0) {
-      this.viewmodelRig.remove(this.viewmodelRig.children[0]);
+    // Remove existing weapon mesh from holder (keeps viewmodelLight intact)
+    while (this.weaponMeshHolder.children.length > 0) {
+      this.weaponMeshHolder.remove(this.weaponMeshHolder.children[0]);
     }
 
     this.currentSlot = slotIndex;
     const active = this.getActiveWeapon();
-    this.viewmodelRig.add(active.root);
+    this.weaponMeshHolder.add(active.root);
 
     if (this.audioManager) {
       this.audioManager.playSwitchWeapon();
@@ -193,7 +203,10 @@ export class WeaponManager {
 
     if (!active.canFire(currentTime)) {
       if (active.currentAmmo <= 0 && !active.isReloading) {
-        if (this.audioManager) this.audioManager.playEmptyClick();
+        if (currentTime - this.lastEmptyClickTime > 0.32) {
+          this.lastEmptyClickTime = currentTime;
+          if (this.audioManager) this.audioManager.playEmptyClick();
+        }
       }
       return false;
     }

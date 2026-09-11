@@ -108,14 +108,16 @@ export class HordeManager {
       const stillActive = enemy.update(delta, playerPos, this.enemies, this.propManager, onPlayerDamaged);
 
       if (!stillActive) {
-        // Remove dead enemy from scene
+        // Remove dead enemy from scene & GPU
         this.scene.remove(enemy.mesh);
+        if (typeof enemy.dispose === 'function') enemy.dispose();
         this.enemies.splice(i, 1);
-        this.updateTargetableMeshes();
       } else if (enemy.isAlive()) {
         livingCount++;
       }
     }
+
+    this.updateTargetableMeshes();
 
     if (this.gameState) {
       this.gameState.enemiesRemaining = livingCount + (this.totalEnemiesInWave - this.enemiesSpawnedSoFar);

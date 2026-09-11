@@ -513,6 +513,16 @@ export class HUD {
     this.pickupNotifyEl = this.container.querySelector('#pickup-notify');
     this.threatCompassEl = this.container.querySelector('#threat-compass');
 
+    // Reusable compass blip pool (eliminates 1,000 DOM allocations/removals per second)
+    this.blipPool = [];
+    for (let i = 0; i < 10; i++) {
+      const b = document.createElement('div');
+      b.className = 'compass-blip';
+      b.style.display = 'none';
+      this.threatCompassEl.appendChild(b);
+      this.blipPool.push(b);
+    }
+
     this.slotEls = [
       this.container.querySelector('#slot-0'),
       this.container.querySelector('#slot-1'),
@@ -637,16 +647,13 @@ export class HUD {
       this.comboBadgeEl.style.opacity = '0';
     }
 
-    // Update Threat Compass Blips
+    // Update Threat Compass Blips using fixed pool
+    let activeBlipIndex = 0;
     if (playerController && enemies && enemies.length > 0) {
-      // Clear old blips
-      const oldBlips = this.threatCompassEl.querySelectorAll('.compass-blip');
-      oldBlips.forEach(b => b.remove());
-
       const playerYaw = playerController.yaw;
       const compassWidth = 220;
 
-      for (let i = 0; i < Math.min(enemies.length, 8); i++) {
+      for (let i = 0; i < enemies.length && activeBlipIndex < this.blipPool.length; i++) {
         const e = enemies[i];
         if (!e.isAlive()) continue;
 
@@ -665,12 +672,16 @@ export class HUD {
           const normX = diff / (Math.PI * 0.5); // [-1, 1]
           const pixelX = (compassWidth / 2) + normX * (compassWidth / 2 - 8);
 
-          const blip = document.createElement('div');
-          blip.className = 'compass-blip';
+          const blip = this.blipPool[activeBlipIndex++];
           blip.style.left = `${pixelX}px`;
-          this.threatCompassEl.appendChild(blip);
+          blip.style.display = 'block';
         }
       }
+    }
+
+    // Hide remaining unused blips in pool
+    for (let i = activeBlipIndex; i < this.blipPool.length; i++) {
+      this.blipPool[i].style.display = 'none';
     }
   }
 }

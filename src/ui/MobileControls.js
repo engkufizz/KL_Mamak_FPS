@@ -658,8 +658,8 @@ export class MobileControls {
     this.btnLeftFire.addEventListener('touchcancel', stopLeftFire, { passive: true });
 
     // 5. ADS (Aim Down Sights) with Snap-on-ADS
-    this.btnAds.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+    const toggleAds = (e) => {
+      if (e && e.cancelable) e.preventDefault();
       if (this.weapons) {
         const nextAds = !this.weapons.isADS;
         this.weapons.setADS(nextAds);
@@ -670,11 +670,13 @@ export class MobileControls {
           this.btnAds.classList.remove('active');
         }
       }
-    }, { passive: false });
+    };
+    this.btnAds.addEventListener('touchstart', toggleAds, { passive: false });
+    this.btnAds.addEventListener('click', toggleAds);
 
     // 6. Jump
-    this.btnJump.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+    const doJump = (e) => {
+      if (e && e.cancelable) e.preventDefault();
       if (this.player && this.player.isGrounded) {
         this.player.velocity.y = this.player.jumpForce;
         this.player.isGrounded = false;
@@ -682,21 +684,27 @@ export class MobileControls {
           this.player.audioManager.playFootstep(true);
         }
       }
-    }, { passive: false });
+    };
+    this.btnJump.addEventListener('touchstart', doJump, { passive: false });
+    this.btnJump.addEventListener('click', doJump);
 
     // 7. Reload
-    this.btnReload.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+    const doReload = (e) => {
+      if (e && e.cancelable) e.preventDefault();
       if (this.weapons) this.weapons.triggerReload();
-    }, { passive: false });
+    };
+    this.btnReload.addEventListener('touchstart', doReload, { passive: false });
+    this.btnReload.addEventListener('click', doReload);
 
     // 8. Sprint Toggle
-    this.btnSprint.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+    const toggleSprint = (e) => {
+      if (e && e.cancelable) e.preventDefault();
       this.isSprinting = !this.isSprinting;
       if (this.isSprinting) this.btnSprint.classList.add('pressed');
       else this.btnSprint.classList.remove('pressed');
-    }, { passive: false });
+    };
+    this.btnSprint.addEventListener('touchstart', toggleSprint, { passive: false });
+    this.btnSprint.addEventListener('click', toggleSprint);
 
     // 9. Weapon Pills
     this.wepPills.forEach((pill, idx) => {

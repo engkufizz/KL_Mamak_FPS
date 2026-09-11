@@ -125,6 +125,13 @@ class Game {
         }
       }
     });
+
+    // Window resize & orientation change handler
+    this.engine.onWindowResize((width, height) => {
+      if (this.postProcessing) {
+        this.postProcessing.updateDimensions(width, height);
+      }
+    });
   }
 
   pauseGame() {
@@ -152,20 +159,36 @@ class Game {
   restartGame() {
     this.gameState.reset();
 
-    // Clear existing enemies
+    // Clear existing enemies with GPU cleanup
     for (const e of this.hordeManager.enemies) {
       this.engine.scene.remove(e.mesh);
+      if (typeof e.dispose === 'function') e.dispose();
     }
     this.hordeManager.enemies = [];
     this.hordeManager.currentWave = 0;
     this.hordeManager.waveState = 'intermission';
     this.hordeManager.intermissionTimer = 1.0;
+    this.hordeManager.updateTargetableMeshes();
 
     // Reset pickups
-    for (const p of this.pickupManager.pickups) {
-      this.engine.scene.remove(p.mesh);
+    if (typeof this.pickupManager.reset === 'function') {
+      this.pickupManager.reset();
+    } else {
+      for (const p of this.pickupManager.pickups) {
+        this.engine.scene.remove(p.mesh);
+      }
+      this.pickupManager.pickups = [];
     }
-    this.pickupManager.pickups = [];
+
+    // Reset bullets, tracers & particles
+    if (typeof this.bulletManager.reset === 'function') {
+      this.bulletManager.reset();
+    }
+
+    // Reset mamak stools & tables to initial layout
+    if (typeof this.propManager.reset === 'function') {
+      this.propManager.reset();
+    }
 
     // Reset player position & vitals
     this.player.position.set(0, 1.7, 14);

@@ -285,15 +285,17 @@ export class Weapon {
 
     // Flash visibility
     if (this.muzzleFlash) {
+      if (this.flashTimeout) clearTimeout(this.flashTimeout);
       this.muzzleFlash.children.forEach(c => c.material.visible = true);
       this.muzzleFlash.rotation.z = Math.random() * Math.PI * 2;
       this.muzzleLight.intensity = 4.5;
 
-      setTimeout(() => {
+      this.flashTimeout = setTimeout(() => {
         if (this.muzzleFlash) {
           this.muzzleFlash.children.forEach(c => c.material.visible = false);
           this.muzzleLight.intensity = 0.0;
         }
+        this.flashTimeout = null;
       }, 50);
     }
 
@@ -307,8 +309,10 @@ export class Weapon {
     // Pump action rack trigger
     if (this.isPumpAction) {
       this.pumpTimer = 0.48;
-      setTimeout(() => {
+      if (this.pumpTimeout) clearTimeout(this.pumpTimeout);
+      this.pumpTimeout = setTimeout(() => {
         if (audioManager) audioManager.playShotgunPump();
+        this.pumpTimeout = null;
       }, 120);
     }
 
@@ -326,6 +330,25 @@ export class Weapon {
       audioManager.playReloadSound(this.type);
     }
     return true;
+  }
+
+  cancelActions() {
+    if (this.flashTimeout) {
+      clearTimeout(this.flashTimeout);
+      this.flashTimeout = null;
+    }
+    if (this.pumpTimeout) {
+      clearTimeout(this.pumpTimeout);
+      this.pumpTimeout = null;
+    }
+    if (this.muzzleFlash) {
+      this.muzzleFlash.children.forEach(c => c.material.visible = false);
+      if (this.muzzleLight) this.muzzleLight.intensity = 0.0;
+    }
+    this.pumpTimer = 0;
+    if (this.pumpSlideMesh) {
+      this.pumpSlideMesh.position.z = -0.42;
+    }
   }
 
   update(delta, time, swayOffset) {
@@ -364,6 +387,7 @@ export class Weapon {
   }
 
   reset() {
+    this.cancelActions();
     this.currentAmmo = this.magSize;
     this.reserveAmmo = this.maxReserveAmmo;
     this.isReloading = false;

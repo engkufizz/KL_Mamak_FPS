@@ -252,4 +252,18 @@ export class BulletManager {
       this.sparkGeom.attributes.position.needsUpdate = true;
     }
   }
+
+  reset() {
+    for (let i = 0; i < this.tracers.length; i++) {
+      this.scene.remove(this.tracers[i].mesh);
+    }
+    this.tracers = [];
+    for (let i = 0; i < this.maxSparks; i++) {
+      this.sparkLifetimes[i] = -1.0;
+      this.sparkPositions[i * 3 + 1] = -999;
+    }
+    if (this.sparkGeom && this.sparkGeom.attributes && this.sparkGeom.attributes.position) {
+      this.sparkGeom.attributes.position.needsUpdate = true;
+    }
+  }
 }
