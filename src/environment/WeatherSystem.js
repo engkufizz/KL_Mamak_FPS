@@ -92,11 +92,24 @@ export class WeatherSystem {
 
     // Delay thunder depending on lightning distance (speed of sound)
     const thunderDelay = distance * 400;
-    setTimeout(() => {
+    if (this.thunderTimeout) clearTimeout(this.thunderTimeout);
+    this.thunderTimeout = setTimeout(() => {
       if (this.audioManager) {
         this.audioManager.playThunder(distance);
       }
+      this.thunderTimeout = null;
     }, thunderDelay);
+  }
+
+  reset() {
+    if (this.thunderTimeout) {
+      clearTimeout(this.thunderTimeout);
+      this.thunderTimeout = null;
+    }
+    this.lightningActive = false;
+    this.lightningTimer = 0;
+    if (this.lightningLight) this.lightningLight.intensity = 0.0;
+    if (this.ambientLight) this.ambientLight.intensity = 3.4;
   }
 
   update(delta, playerPos) {
@@ -159,10 +172,10 @@ export class WeatherSystem {
       }
 
       this.lightningLight.intensity = flash * 5.5;
-      this.ambientLight.intensity = 1.7 + flash * 2.5;
+      this.ambientLight.intensity = 3.4 + flash * 2.5;
     } else {
       this.lightningLight.intensity = 0.0;
-      this.ambientLight.intensity = 1.7;
+      this.ambientLight.intensity = 3.4;
     }
   }
 }

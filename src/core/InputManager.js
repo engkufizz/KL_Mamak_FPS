@@ -36,6 +36,7 @@ export class InputManager {
     this._onPointerlockChange = this._onPointerlockChange.bind(this);
     this._onPointerlockError = this._onPointerlockError.bind(this);
     this._onContextMenu = this._onContextMenu.bind(this);
+    this._onWindowBlur = this._onWindowBlur.bind(this);
 
     this.setupListeners();
   }
@@ -49,8 +50,27 @@ export class InputManager {
     document.addEventListener('wheel', this._onWheel, { passive: true });
     document.addEventListener('pointerlockchange', this._onPointerlockChange, false);
     document.addEventListener('contextmenu', this._onContextMenu, false);
+    window.addEventListener('blur', this._onWindowBlur, false);
+  }
 
+  _onWindowBlur() {
+    this.resetKeys();
+  }
 
+  resetKeys() {
+    this.keys = {};
+    this.prevKeys = {};
+    this.justPressedKeys.clear();
+    this.mouseButtons.left = false;
+    this.mouseButtons.right = false;
+    this.mouseButtons.middle = false;
+    this.prevMouseButtons.left = false;
+    this.prevMouseButtons.right = false;
+    this.prevMouseButtons.middle = false;
+    this.justPressedMouse.clear();
+    this.mouseDelta.x = 0;
+    this.mouseDelta.y = 0;
+    this.wheelDelta = 0;
   }
 
   requestLock() {
@@ -206,15 +226,15 @@ export class InputManager {
   }
 
   isJumping() {
-    return !!this.keys['Space'];
+    return !!this.keys['Space'] || !!this.keys[' '] || !!this.keys['Spacebar'];
   }
 
   isJumpJustPressed() {
-    return this.isKeyJustPressed('Space');
+    return this.isKeyJustPressed('Space') || this.isKeyJustPressed(' ') || this.isKeyJustPressed('Spacebar');
   }
 
   isReloadJustPressed() {
-    return this.isKeyJustPressed('KeyR');
+    return this.isKeyJustPressed('KeyR') || this.isKeyJustPressed('r') || this.isKeyJustPressed('R');
   }
 
   isWeaponSlotJustPressed() {

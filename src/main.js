@@ -138,6 +138,7 @@ class Game {
     if (this.isPlaying && !this.gameState.isDead) {
       this.isPaused = true;
       this.inputManager.exitLock();
+      this.inputManager.resetKeys();
       if (this.mobileControls.isTouchDevice) {
         this.mobileControls.hide();
       }
@@ -158,17 +159,27 @@ class Game {
 
   restartGame() {
     this.gameState.reset();
+    this.inputManager.resetKeys();
 
-    // Clear existing enemies with GPU cleanup
-    for (const e of this.hordeManager.enemies) {
-      this.engine.scene.remove(e.mesh);
-      if (typeof e.dispose === 'function') e.dispose();
+    // Reset horde manager & living enemies with GPU cleanup
+    if (typeof this.hordeManager.reset === 'function') {
+      this.hordeManager.reset();
+    } else {
+      for (const e of this.hordeManager.enemies) {
+        this.engine.scene.remove(e.mesh);
+        if (typeof e.dispose === 'function') e.dispose();
+      }
+      this.hordeManager.enemies = [];
+      this.hordeManager.currentWave = 0;
+      this.hordeManager.waveState = 'intermission';
+      this.hordeManager.intermissionTimer = 1.0;
+      this.hordeManager.updateTargetableMeshes();
     }
-    this.hordeManager.enemies = [];
-    this.hordeManager.currentWave = 0;
-    this.hordeManager.waveState = 'intermission';
-    this.hordeManager.intermissionTimer = 1.0;
-    this.hordeManager.updateTargetableMeshes();
+
+    // Reset weather & thunder timeouts
+    if (typeof this.weather.reset === 'function') {
+      this.weather.reset();
+    }
 
     // Reset pickups
     if (typeof this.pickupManager.reset === 'function') {

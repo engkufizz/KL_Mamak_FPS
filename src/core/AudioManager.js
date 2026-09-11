@@ -462,6 +462,47 @@ export class AudioManager {
     }
   }
 
+  // Puddle water splash for furniture or body impacts
+  playPuddleSplash(intensity = 0.3) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const dur = 0.15;
+
+    // Low water plop / thump
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + dur);
+
+    const oscGain = this.ctx.createGain();
+    oscGain.gain.setValueAtTime(intensity * 0.7, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + dur);
+
+    // Water spray hiss / splash
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.createNoiseBuffer(0.2);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1600, t);
+    filter.Q.setValueAtTime(1.8, t);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(intensity, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.sfxGain);
+    noise.start(t);
+    noise.stop(t + 0.2);
+  }
+
   // Destructible mamak prop impact (plastic stool hollow crack or metal thud)
   playPropImpact(isMetal = false) {
     if (!this.ctx) return;

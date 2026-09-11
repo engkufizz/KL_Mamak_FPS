@@ -151,9 +151,10 @@ export class PickupManager {
       if (this.hud) {
         this.hud.showPickupNotification('+HEALTH & SHIELD RESTORED', '#00ff66');
       }
-      if (this.audioManager) {
-        this.audioManager.playMechanicalClick(this.audioManager.ctx.currentTime, 880, 0.8, 0.15);
-        this.audioManager.playMechanicalClick(this.audioManager.ctx.currentTime + 0.08, 1320, 0.9, 0.2);
+      if (this.audioManager && this.audioManager.ctx) {
+        const t = this.audioManager.ctx.currentTime;
+        this.audioManager.playMechanicalClick(t, 880, 0.8, 0.15);
+        this.audioManager.playMechanicalClick(t + 0.08, 1320, 0.9, 0.2);
       }
     } else if (pickup.type === 'ammo') {
       if (this.weaponManager) {
@@ -166,9 +167,10 @@ export class PickupManager {
       if (this.hud) {
         this.hud.showPickupNotification('+AMMO CACHE RESUPPLIED', '#00e1ff');
       }
-      if (this.audioManager) {
-        this.audioManager.playMechanicalClick(this.audioManager.ctx.currentTime, 1100, 0.8, 0.12);
-        this.audioManager.playMechanicalClick(this.audioManager.ctx.currentTime + 0.06, 1650, 0.9, 0.18);
+      if (this.audioManager && this.audioManager.ctx) {
+        const t = this.audioManager.ctx.currentTime;
+        this.audioManager.playMechanicalClick(t, 1100, 0.8, 0.12);
+        this.audioManager.playMechanicalClick(t + 0.06, 1650, 0.9, 0.18);
       }
     }
   }

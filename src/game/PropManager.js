@@ -154,14 +154,22 @@ export class PropManager {
 
   // Apply kinetic impulse from gunshots or blast shockwaves
   applyImpulse(hitPoint, impulseDirection, force) {
+    const hp = (hitPoint && typeof hitPoint.clone === 'function')
+      ? hitPoint
+      : new THREE.Vector3(hitPoint?.x || 0, hitPoint?.y || 0, hitPoint?.z || 0);
+
+    const dir = (impulseDirection && typeof impulseDirection.clone === 'function')
+      ? impulseDirection.clone().normalize()
+      : new THREE.Vector3(impulseDirection?.x || 0, impulseDirection?.y || 0, impulseDirection?.z || -1).normalize();
+
     for (const prop of this.props) {
       const pos = prop.mesh.position;
-      const dist = pos.distanceTo(hitPoint);
+      const dist = pos.distanceTo(hp);
 
       if (dist < prop.radius * 1.5) {
         // Direct hit!
         const pushForce = force / prop.mass;
-        prop.velocity.add(impulseDirection.clone().multiplyScalar(pushForce));
+        prop.velocity.add(dir.clone().multiplyScalar(pushForce));
         prop.velocity.y += Math.min(pushForce * 0.45, 6.5); // Lift into the air!
 
         // Angular spin impulse
@@ -182,13 +190,17 @@ export class PropManager {
 
   // Area of effect blast impulse (e.g. shotgun point blank or bio-goliath ground smash)
   applyExplosionImpulse(epicenter, maxRadius, maxForce) {
+    const center = (epicenter && typeof epicenter.clone === 'function')
+      ? epicenter
+      : new THREE.Vector3(epicenter?.x || 0, epicenter?.y || 0, epicenter?.z || 0);
+
     for (const prop of this.props) {
       const pos = prop.mesh.position;
-      const dist = pos.distanceTo(epicenter);
+      const dist = pos.distanceTo(center);
 
       if (dist < maxRadius) {
         const falloff = 1.0 - dist / maxRadius;
-        const dir = pos.clone().sub(epicenter).normalize();
+        const dir = pos.clone().sub(center).normalize();
         dir.y += 0.5;
         dir.normalize();
 

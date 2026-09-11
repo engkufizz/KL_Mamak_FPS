@@ -135,4 +135,20 @@ export class HordeManager {
       }
     }
   }
+
+  reset() {
+    for (const e of this.enemies) {
+      this.scene.remove(e.mesh);
+      if (typeof e.dispose === 'function') e.dispose();
+    }
+    this.enemies = [];
+    this.targetableMeshes = [];
+    this.currentWave = 0;
+    this.waveState = 'intermission';
+    this.intermissionTimer = 1.0;
+    this.totalEnemiesInWave = 0;
+    this.enemiesSpawnedSoFar = 0;
+    this.spawnTimer = 0;
+    this.updateTargetableMeshes();
+  }
 }
