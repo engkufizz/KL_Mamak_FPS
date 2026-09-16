@@ -10,6 +10,38 @@ const _flankDir = new THREE.Vector3();
 const _separation = new THREE.Vector3();
 const _diff = new THREE.Vector3();
 
+// ---------------------------------------------------------------------------
+// Shared GPU resources.
+// Enemies used to build a fresh set of geometries/materials on every spawn:
+// each new BufferGeometry uploads to the GPU on its first draw, which caused a
+// visible stall every time the horde spawned, and memory grew without bound.
+// Geometry/material instances are identical per enemy type, so they are cached
+// and shared. Nothing mutates them per instance (health bars scale the mesh,
+// not the geometry), and dispose() no longer frees them.
+// ---------------------------------------------------------------------------
+const _geometryCache = new Map();
+const _materialCache = new Map();
+
+function sharedGeometry(Ctor, ...args) {
+  const key = `${Ctor.name}:${args.join(',')}`;
+  let geo = _geometryCache.get(key);
+  if (!geo) {
+    geo = new Ctor(...args);
+    _geometryCache.set(key, geo);
+  }
+  return geo;
+}
+
+function sharedMaterial(Ctor, options) {
+  const key = `${Ctor.name}:${JSON.stringify(options)}`;
+  let mat = _materialCache.get(key);
+  if (!mat) {
+    mat = new Ctor(options);
+    _materialCache.set(key, mat);
+  }
+  return mat;
+}
+
 export class Enemy {
   constructor(scene, type, spawnPos, audioManager, waveNumber = 1) {
     this.scene = scene;
@@ -82,14 +114,14 @@ export class Enemy {
     this.hpBarGroup = new THREE.Group();
     this.hpBarGroup.position.y = this.height + 0.35;
 
-    const bgMat = new THREE.MeshBasicMaterial({ color: 0x11161d });
-    const bg = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.08), bgMat);
+    const bgMat = sharedMaterial(THREE.MeshBasicMaterial, { color: 0x11161d });
+    const bg = new THREE.Mesh(sharedGeometry(THREE.PlaneGeometry, 0.7, 0.08), bgMat);
     this.hpBarGroup.add(bg);
 
-    const fillMat = new THREE.MeshBasicMaterial({
+    const fillMat = sharedMaterial(THREE.MeshBasicMaterial, {
       color: this.type === 'goliath' ? 0x39ff14 : (this.type === 'enforcer' ? 0xff3344 : 0x00ffcc)
     });
-    this.hpBarFill = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.06), fillMat);
+    this.hpBarFill = new THREE.Mesh(sharedGeometry(THREE.PlaneGeometry, 0.66, 0.06), fillMat);
     this.hpBarFill.position.z = 0.005;
     this.hpBarGroup.add(this.hpBarFill);
 
@@ -109,171 +141,171 @@ export class Enemy {
 
   // 1. Mat Rempit Cyber-Runner: High-contrast cyan visor, glowing chest reactor & hot blade
   buildRunnerModel() {
-    const suitMat = new THREE.MeshStandardMaterial({ color: 0x1c242d, roughness: 0.45 });
-    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xccddee, metalness: 0.9, roughness: 0.2 });
-    const neonVisorMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ddff, emissiveIntensity: 2.5 });
-    const neonCoreMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00e1ff, emissiveIntensity: 2.8 });
+    const suitMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x1c242d, roughness: 0.45 });
+    const chromeMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0xccddee, metalness: 0.9, roughness: 0.2 });
+    const neonVisorMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x00ffff, emissive: 0x00ddff, emissiveIntensity: 2.5 });
+    const neonCoreMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x00ffff, emissive: 0x00e1ff, emissiveIntensity: 2.8 });
 
     // Torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.3), suitMat);
+    const torso = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.5, 0.65, 0.3), suitMat);
     torso.position.y = 1.1;
     this.mesh.add(torso);
 
     // Glowing chest power core
-    const core = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.04), neonCoreMat);
+    const core = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.2, 0.2, 0.04), neonCoreMat);
     core.position.set(0, 1.2, -0.16);
     this.mesh.add(core);
 
     // Cyber Head & Glowing Visor
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.32), chromeMat);
+    const head = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.3, 0.32, 0.32), chromeMat);
     head.position.y = 1.6;
     this.mesh.add(head);
 
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.06), neonVisorMat);
+    const visor = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.28, 0.1, 0.06), neonVisorMat);
     visor.position.set(0, 1.62, -0.17);
     this.mesh.add(visor);
 
     // Glowing shoulder strips
-    const stripL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.16), neonVisorMat);
+    const stripL = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.04, 0.2, 0.16), neonVisorMat);
     stripL.position.set(-0.26, 1.35, 0);
-    const stripR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.16), neonVisorMat);
+    const stripR = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.04, 0.2, 0.16), neonVisorMat);
     stripR.position.set(0.26, 1.35, 0);
     this.mesh.add(stripL, stripR);
 
     // Limbs
     const armMat = chromeMat;
-    this.leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.6, 0.14), armMat);
+    this.leftArm = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.14, 0.6, 0.14), armMat);
     this.leftArm.position.set(-0.35, 1.05, 0);
     this.mesh.add(this.leftArm);
 
-    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.6, 0.14), armMat);
+    this.rightArm = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.14, 0.6, 0.14), armMat);
     this.rightArm.position.set(0.35, 1.05, 0);
     this.mesh.add(this.rightArm);
 
     // Weapon: Cyber Machete with hot magenta energy glow
-    const bladeMat = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0044, emissiveIntensity: 2.4 });
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.75, 0.12), bladeMat);
+    const bladeMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0xff0055, emissive: 0xff0044, emissiveIntensity: 2.4 });
+    const blade = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.04, 0.75, 0.12), bladeMat);
     blade.position.set(0.38, 0.75, -0.2);
     blade.rotation.x = Math.PI / 4;
     this.mesh.add(blade);
 
     // Legs
-    this.leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.75, 0.18), suitMat);
+    this.leftLeg = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.18, 0.75, 0.18), suitMat);
     this.leftLeg.position.set(-0.16, 0.4, 0);
     this.mesh.add(this.leftLeg);
 
-    this.rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.75, 0.18), suitMat);
+    this.rightLeg = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.18, 0.75, 0.18), suitMat);
     this.rightLeg.position.set(0.16, 0.4, 0);
     this.mesh.add(this.rightLeg);
   }
 
   // 2. Syndicate Enforcer: Tactical red optics, illuminated chest core, electric baton
   buildEnforcerModel() {
-    const armorMat = new THREE.MeshStandardMaterial({ color: 0x242a32, roughness: 0.35, metalness: 0.8 });
-    const redVisor = new THREE.MeshStandardMaterial({ color: 0xff1122, emissive: 0xff0011, emissiveIntensity: 2.8 });
-    const batonMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff77, emissiveIntensity: 2.6 });
+    const armorMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x242a32, roughness: 0.35, metalness: 0.8 });
+    const redVisor = sharedMaterial(THREE.MeshStandardMaterial, { color: 0xff1122, emissive: 0xff0011, emissiveIntensity: 2.8 });
+    const batonMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x00ff88, emissive: 0x00ff77, emissiveIntensity: 2.6 });
 
     // Torso with heavy armor chestplate
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.72, 0.38), armorMat);
+    const torso = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.65, 0.72, 0.38), armorMat);
     torso.position.y = 1.15;
     this.mesh.add(torso);
 
     // Red illuminated chest armor chevron
-    const chestGlow = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.04), redVisor);
+    const chestGlow = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.24, 0.16, 0.04), redVisor);
     chestGlow.position.set(0, 1.25, -0.2);
     this.mesh.add(chestGlow);
 
     // Tactical Helmet
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.36), armorMat);
+    const head = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.35, 0.35, 0.36), armorMat);
     head.position.y = 1.72;
     this.mesh.add(head);
 
     // Wide glowing red cyber-visor
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.06), redVisor);
+    const eye = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.28, 0.08, 0.06), redVisor);
     eye.position.set(0, 1.74, -0.19);
     this.mesh.add(eye);
 
     // Arms & Shock Baton
-    this.leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.65, 0.18), armorMat);
+    this.leftArm = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.18, 0.65, 0.18), armorMat);
     this.leftArm.position.set(-0.45, 1.1, 0);
     this.mesh.add(this.leftArm);
 
-    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.65, 0.18), armorMat);
+    this.rightArm = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.18, 0.65, 0.18), armorMat);
     this.rightArm.position.set(0.45, 1.1, 0);
     this.mesh.add(this.rightArm);
 
-    const baton = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.85, 8), batonMat);
+    const baton = new THREE.Mesh(sharedGeometry(THREE.CylinderGeometry, 0.04, 0.04, 0.85, 8), batonMat);
     baton.position.set(0.48, 0.85, -0.2);
     baton.rotation.x = Math.PI / 3;
     this.mesh.add(baton);
 
     // Legs
-    this.leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.22), armorMat);
+    this.leftLeg = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.22, 0.8, 0.22), armorMat);
     this.leftLeg.position.set(-0.2, 0.42, 0);
     this.mesh.add(this.leftLeg);
 
-    this.rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.22), armorMat);
+    this.rightLeg = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.22, 0.8, 0.22), armorMat);
     this.rightLeg.position.set(0.2, 0.42, 0);
     this.mesh.add(this.rightLeg);
   }
 
   // 3. Bio-Goliath: Towering mutant with pulsing toxic green spinal cysts and glowing eyes
   buildGoliathModel() {
-    const fleshMat = new THREE.MeshStandardMaterial({ color: 0x36423d, roughness: 0.7 });
-    const toxicGlow = new THREE.MeshStandardMaterial({ color: 0x39ff14, emissive: 0x24ff00, emissiveIntensity: 2.8 });
+    const fleshMat = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x36423d, roughness: 0.7 });
+    const toxicGlow = sharedMaterial(THREE.MeshStandardMaterial, { color: 0x39ff14, emissive: 0x24ff00, emissiveIntensity: 2.8 });
 
     // Massive hunched torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.1, 0.8), fleshMat);
+    const torso = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 1.2, 1.1, 0.8), fleshMat);
     torso.position.y = 1.45;
     this.mesh.add(torso);
 
     // Glowing spinal cysts
-    const cyst1 = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), toxicGlow);
+    const cyst1 = new THREE.Mesh(sharedGeometry(THREE.SphereGeometry, 0.24, 8, 8), toxicGlow);
     cyst1.position.set(-0.3, 1.75, 0.45);
     this.mesh.add(cyst1);
 
-    const cyst2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), toxicGlow);
+    const cyst2 = new THREE.Mesh(sharedGeometry(THREE.SphereGeometry, 0.3, 8, 8), toxicGlow);
     cyst2.position.set(0.25, 1.9, 0.42);
     this.mesh.add(cyst2);
 
-    const cyst3 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), toxicGlow);
+    const cyst3 = new THREE.Mesh(sharedGeometry(THREE.SphereGeometry, 0.22, 8, 8), toxicGlow);
     cyst3.position.set(0.0, 1.5, 0.46);
     this.mesh.add(cyst3);
 
     // Brute Head
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 0.5), fleshMat);
+    const head = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.5, 0.45, 0.5), fleshMat);
     head.position.y = 2.05;
     head.position.z = -0.3;
     this.mesh.add(head);
 
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.2, 0.35), fleshMat);
+    const jaw = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.42, 0.2, 0.35), fleshMat);
     jaw.position.set(0, 1.88, -0.42);
     this.mesh.add(jaw);
 
     // Glowing bio-eyes
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), toxicGlow);
+    const eye1 = new THREE.Mesh(sharedGeometry(THREE.SphereGeometry, 0.08, 8, 8), toxicGlow);
     eye1.position.set(-0.14, 2.12, -0.55);
     this.mesh.add(eye1);
 
-    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), toxicGlow);
+    const eye2 = new THREE.Mesh(sharedGeometry(THREE.SphereGeometry, 0.08, 8, 8), toxicGlow);
     eye2.position.set(0.14, 2.12, -0.55);
     this.mesh.add(eye2);
 
     // Giant Battering Arms
-    this.leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 1.1, 0.38), fleshMat);
+    this.leftArm = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.38, 1.1, 0.38), fleshMat);
     this.leftArm.position.set(-0.8, 1.25, -0.1);
     this.mesh.add(this.leftArm);
 
-    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 1.1, 0.38), fleshMat);
+    this.rightArm = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.38, 1.1, 0.38), fleshMat);
     this.rightArm.position.set(0.8, 1.25, -0.1);
     this.mesh.add(this.rightArm);
 
     // Thick Legs
-    this.leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.95, 0.4), fleshMat);
+    this.leftLeg = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.4, 0.95, 0.4), fleshMat);
     this.leftLeg.position.set(-0.35, 0.48, 0);
     this.mesh.add(this.leftLeg);
 
-    this.rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.95, 0.4), fleshMat);
+    this.rightLeg = new THREE.Mesh(sharedGeometry(THREE.BoxGeometry, 0.4, 0.95, 0.4), fleshMat);
     this.rightLeg.position.set(0.35, 0.48, 0);
     this.mesh.add(this.rightLeg);
   }
@@ -473,15 +505,12 @@ export class Enemy {
   }
 
   dispose() {
-    this.mesh.traverse((child) => {
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
+    // NOTE: geometries and materials are SHARED between all enemies of a type
+    // (see sharedGeometry/sharedMaterial above), so they must NOT be disposed
+    // here — doing so would free GPU resources still in use by other enemies.
+    // Just detach this instance from the scene graph.
+    if (this.mesh && this.mesh.parent) {
+      this.mesh.parent.remove(this.mesh);
+    }
   }
 }

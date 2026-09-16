@@ -58,7 +58,17 @@ The game must always support both desktop keyboard/mouse and mobile touchscreen 
 ### Rule 3: Port 5180 Convention
 The Vite dev server is configured to run on **port 5180** in `vite.config.js`. Do **not** change the default port back to 3000 or 5173, as other services on the host machine frequently collide with those common ports.
 
-### Rule 4: Mobile Performance Budget
+### Rule 4: Never Create GPU Resources During Gameplay (perf-critical)
+
+Creating three.js resources while the player is in a run causes a visible freeze:
+
+- **Lights: never add or remove a light at runtime.** The light count is baked into every lit shader — adding one forces three.js to recompile ~13–16 shader programs *per spawn* (measured; a multi-hundred-millisecond stall on mobile) and the program count never comes back down. Use a **fixed pool created at boot** and modulate `intensity` / `color` instead (see `PickupManager.lightPool`).
+- **Geometries/materials: share them.** One `BufferGeometry` per spawn uploads new GPU buffers on first draw. Cache per type (see `sharedGeometry` / `sharedMaterial` in `Enemy.js`, `sharedGeo` in `PickupManager`) and never `dispose()` a shared resource from an instance — detach from the scene instead.
+- **Pre-warm at boot**: `renderer.compile(scene, camera)` runs during loading (`Game.prewarmShaders`), so first use of any material does not stall gameplay.
+- **HUD/DOM**: write to the DOM only when a value actually changes (dirty-check). Unconditional per-frame `style`/`textContent` writes cause style recalc + repaint every frame.
+- Verify with the resource-growth probe: `renderer.info.programs.length` and `renderer.info.memory.geometries` must stay **constant** during play (see `diagnose_gpu_growth.js` / `diagnose_light_recompile.js`).
+
+### Rule 5: Mobile Performance Budget
 - Keep draw calls consolidated where possible.
 - `Engine.js` clamps the WebGL renderer device pixel ratio on touch devices to `Math.min(window.devicePixelRatio, 1.6)` to guarantee a stable 60 FPS on mobile Retina/OLED displays without overheating.
 
