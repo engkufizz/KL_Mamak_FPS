@@ -19,6 +19,7 @@ export class Menu {
           left: 0;
           width: 100vw;
           height: 100vh;
+          height: 100dvh; /* mobile: exclude the browser UI so nothing is cut */
           font-family: 'Rajdhani', 'Segoe UI', 'Impact', sans-serif;
           color: #ffffff;
           z-index: 100;
@@ -36,10 +37,21 @@ export class Menu {
           display: flex;
           flex-direction: column;
           align-items: center;
+          /* 'safe center' keeps the layout centred when it fits, but scrolls
+             instead of clipping the top when the menu is taller than a short
+             landscape viewport (previously the title was cut off). */
           justify-content: center;
+          justify-content: safe center;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
           transition: opacity 0.25s ease;
-          padding: 16px;
+          padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
           pointer-events: auto;
+        }
+
+        .menu-modal > * {
+          flex-shrink: 0; /* never squash menu rows; the modal scrolls instead */
         }
 
         .menu-modal.hidden {
@@ -206,6 +218,93 @@ export class Menu {
             grid-template-columns: 1fr;
             gap: 8px;
           }
+        }
+
+        /* Short landscape viewports (phones held sideways, e.g. 1280x600):
+           tighten the vertical rhythm so the full menu fits without clipping. */
+        @media (max-height: 700px) {
+          .cyber-title {
+            font-size: clamp(20px, 4.4vw, 38px);
+            letter-spacing: 3px;
+            margin-bottom: 2px;
+          }
+          .cyber-subtitle {
+            font-size: clamp(10px, 1.9vw, 14px);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+          }
+          .btn-play {
+            padding: 10px 24px;
+            font-size: clamp(14px, 2.6vw, 19px);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+          }
+          .btn-secondary {
+            padding: 8px 18px;
+            font-size: clamp(12px, 2.2vw, 15px);
+          }
+          .btn-group {
+            margin-bottom: 8px;
+            gap: 10px;
+          }
+          .controls-card {
+            padding: 8px 14px;
+            gap: 6px 18px;
+            font-size: clamp(11px, 1.7vw, 13px);
+            max-width: min(94vw, 640px);
+          }
+          .control-row { gap: 8px; }
+          .ctrl-key {
+            min-width: 58px;
+            padding: 2px 6px;
+            font-size: 11px;
+          }
+          .stats-grid {
+            margin: 8px 0 10px;
+            padding: 10px 16px;
+            gap: 8px 20px;
+          }
+          .ios-tip { margin-top: 6px; }
+        }
+
+        /* Very short viewports (phone landscape, ~390px tall): trim further so
+           the menu still fits on screen without scrolling. */
+        @media (max-height: 470px) {
+          .cyber-title {
+            font-size: clamp(17px, 3vw, 26px);
+            letter-spacing: 2px;
+          }
+          .cyber-subtitle {
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+          }
+          .btn-play {
+            padding: 8px 20px;
+            font-size: clamp(13px, 2.2vw, 16px);
+            margin-bottom: 6px;
+          }
+          .btn-secondary {
+            padding: 6px 14px;
+            font-size: 12px;
+          }
+          .btn-group { margin-bottom: 6px; gap: 8px; }
+          .controls-card {
+            padding: 6px 12px;
+            gap: 4px 14px;
+            font-size: 11px;
+          }
+          .ctrl-key {
+            min-width: 52px;
+            font-size: 10px;
+            padding: 1px 5px;
+          }
+          .stats-grid {
+            margin: 6px 0 8px;
+            padding: 8px 12px;
+            gap: 6px 16px;
+          }
+          .ios-tip { margin-top: 4px; font-size: 10px; }
         }
       </style>
 
