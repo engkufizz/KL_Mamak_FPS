@@ -613,71 +613,139 @@ export class HUD {
   update(gameState, weaponManager, playerController, enemies = []) {
     if (!gameState || !weaponManager) return;
 
+    // Dirty-checked DOM writes: every write below is skipped unless the value
+    // actually changed. Unconditional per-frame writes caused style recalc +
+    // repaint of full-screen overlays on every frame, which showed up as
+    // periodic stutter on mobile.
+    const ui = this._ui || (this._ui = {});
+
     // Low health pulse + damage vignette overlay (gives visual feedback with 0 WebGL overhead in Performance Mode)
     if (this.damageVignetteEl) {
       const dmg = gameState.damageVignette || 0;
       const lowHp = typeof gameState.getLowHealthFactor === 'function' ? gameState.getLowHealthFactor() : 0;
       const totalIntensity = Math.min(1.0, dmg * 1.2 + lowHp * 0.6);
-      if (totalIntensity > 0.02) {
-        this.damageVignetteEl.style.opacity = `${totalIntensity}`;
-        this.damageVignetteEl.style.boxShadow = `inset 0 0 ${Math.round(50 + totalIntensity * 70)}px rgba(255, 20, 40, ${0.4 + totalIntensity * 0.5})`;
-      } else {
-        this.damageVignetteEl.style.opacity = '0';
+      const vigKey = totalIntensity > 0.02
+        ? `${totalIntensity.toFixed(2)}|${Math.round(50 + totalIntensity * 70)}|${(0.4 + totalIntensity * 0.5).toFixed(2)}`
+        : 'off';
+      if (ui.vignette !== vigKey) {
+        ui.vignette = vigKey;
+        if (totalIntensity > 0.02) {
+          this.damageVignetteEl.style.opacity = `${totalIntensity}`;
+          this.damageVignetteEl.style.boxShadow = `inset 0 0 ${Math.round(50 + totalIntensity * 70)}px rgba(255, 20, 40, ${0.4 + totalIntensity * 0.5})`;
+        } else {
+          this.damageVignetteEl.style.opacity = '0';
+        }
       }
     }
 
     // Vitals
     const hpPct = Math.max(0, Math.min(100, (gameState.health / gameState.maxHealth) * 100));
     const shdPct = Math.max(0, Math.min(100, (gameState.shield / gameState.maxShield) * 100));
-    this.healthBarEl.style.width = `${hpPct}%`;
-    this.shieldBarEl.style.width = `${shdPct}%`;
-    this.vitalsTextEl.textContent = `HP: ${Math.round(gameState.health)} | SHD: ${Math.round(gameState.shield)}`;
+    const hpKey = hpPct.toFixed(1);
+    if (ui.hp !== hpKey) {
+      ui.hp = hpKey;
+      this.healthBarEl.style.width = `${hpPct}%`;
+    }
+    const shdKey = shdPct.toFixed(1);
+    if (ui.shd !== shdKey) {
+      ui.shd = shdKey;
+      this.shieldBarEl.style.width = `${shdPct}%`;
+    }
+    const vitalsTxt = `HP: ${Math.round(gameState.health)} | SHD: ${Math.round(gameState.shield)}`;
+    if (ui.vitals !== vitalsTxt) {
+      ui.vitals = vitalsTxt;
+      this.vitalsTextEl.textContent = vitalsTxt;
+    }
 
     // Stamina
     if (playerController) {
       const stamPct = Math.max(0, Math.min(100, (playerController.stamina / playerController.maxStamina) * 100));
-      this.staminaBarEl.style.width = `${stamPct}%`;
+      const stamKey = stamPct.toFixed(1);
+      if (ui.stam !== stamKey) {
+        ui.stam = stamKey;
+        this.staminaBarEl.style.width = `${stamPct}%`;
+      }
     }
 
     // Active Weapon Info
     const active = weaponManager.getActiveWeapon();
     if (active) {
-      this.currentAmmoEl.textContent = active.currentAmmo;
-      this.reserveAmmoEl.textContent = `/ ${active.reserveAmmo}`;
-      this.weaponNameEl.textContent = active.name;
+      if (ui.ammo !== active.currentAmmo) {
+        ui.ammo = active.currentAmmo;
+        this.currentAmmoEl.textContent = active.currentAmmo;
+      }
+      const reserveTxt = `/ ${active.reserveAmmo}`;
+      if (ui.reserve !== reserveTxt) {
+        ui.reserve = reserveTxt;
+        this.reserveAmmoEl.textContent = reserveTxt;
+      }
+      if (ui.wname !== active.name) {
+        ui.wname = active.name;
+        this.weaponNameEl.textContent = active.name;
+      }
 
       if (active.currentAmmo <= 0 || (active.currentAmmo <= active.magSize * 0.25 && !active.isReloading)) {
-        this.reloadPromptEl.style.display = 'block';
-        this.reloadPromptEl.textContent = active.isReloading ? 'RELOADING...' : 'PRESS [R] TO RELOAD';
-      } else {
+        const promptTxt = active.isReloading ? 'RELOADING...' : 'PRESS [R] TO RELOAD';
+        if (ui.reloadPrompt !== promptTxt) {
+          ui.reloadPrompt = promptTxt;
+          this.reloadPromptEl.style.display = 'block';
+          this.reloadPromptEl.textContent = promptTxt;
+        }
+      } else if (ui.reloadPrompt !== 'hidden') {
+        ui.reloadPrompt = 'hidden';
         this.reloadPromptEl.style.display = 'none';
       }
 
       // Sockets highlight
-      this.slotEls.forEach((el, idx) => {
-        if (idx === weaponManager.currentSlot) el.classList.add('active');
-        else el.classList.remove('active');
-      });
+      if (ui.slot !== weaponManager.currentSlot) {
+        ui.slot = weaponManager.currentSlot;
+        this.slotEls.forEach((el, idx) => {
+          if (idx === weaponManager.currentSlot) el.classList.add('active');
+          else el.classList.remove('active');
+        });
+      }
 
       // Hide center crosshair during ADS for clean sights / optics
-      this.crosshairEl.style.opacity = weaponManager.isADS ? '0' : '1';
+      const chKey = weaponManager.isADS ? 'ads' : 'hip';
+      if (ui.crosshair !== chKey) {
+        ui.crosshair = chKey;
+        this.crosshairEl.style.opacity = weaponManager.isADS ? '0' : '1';
+      }
     }
 
     // Wave & Enemies
-    this.waveTitleEl.textContent = `GELOMBANG ${gameState.wave}`;
-    this.enemyCountEl.textContent = `MUSUH TINGGAL: ${gameState.enemiesRemaining}`;
+    const waveTxt = `GELOMBANG ${gameState.wave}`;
+    if (ui.wave !== waveTxt) {
+      ui.wave = waveTxt;
+      this.waveTitleEl.textContent = waveTxt;
+    }
+    const enemyTxt = `MUSUH TINGGAL: ${gameState.enemiesRemaining}`;
+    if (ui.enemyCount !== enemyTxt) {
+      ui.enemyCount = enemyTxt;
+      this.enemyCountEl.textContent = enemyTxt;
+    }
 
     // Score & Combo
-    this.scoreValEl.textContent = gameState.score.toString().padStart(6, '0');
+    const scoreTxt = gameState.score.toString().padStart(6, '0');
+    if (ui.score !== scoreTxt) {
+      ui.score = scoreTxt;
+      this.scoreValEl.textContent = scoreTxt;
+    }
     if (gameState.comboCount >= 2) {
-      this.comboBadgeEl.style.opacity = '1';
-      this.comboBadgeEl.textContent = `KOMBO x${gameState.comboMultiplier} · ${gameState.comboCount >= 6 ? 'MAMAK RAMPAGE!' : 'STREET CARNAGE!'}`;
-    } else {
+      const comboKey = `${gameState.comboMultiplier}|${gameState.comboCount >= 6 ? 'rampage' : 'carnage'}`;
+      if (ui.combo !== comboKey) {
+        ui.combo = comboKey;
+        this.comboBadgeEl.style.opacity = '1';
+        this.comboBadgeEl.textContent = `KOMBO x${gameState.comboMultiplier} · ${gameState.comboCount >= 6 ? 'MAMAK RAMPAGE!' : 'STREET CARNAGE!'}`;
+      }
+    } else if (ui.combo !== 'off') {
+      ui.combo = 'off';
       this.comboBadgeEl.style.opacity = '0';
     }
 
     // Update Threat Compass Blips using fixed pool
     let activeBlipIndex = 0;
+    const blipState = this._blipState || (this._blipState = this.blipPool.map(() => ({ left: null, shown: false })));
     if (playerController && enemies && enemies.length > 0) {
       const playerYaw = playerController.yaw;
       const compassWidth = 220;
@@ -701,16 +769,30 @@ export class HUD {
           const normX = diff / (Math.PI * 0.5); // [-1, 1]
           const pixelX = (compassWidth / 2) + normX * (compassWidth / 2 - 8);
 
-          const blip = this.blipPool[activeBlipIndex++];
-          blip.style.left = `${pixelX}px`;
-          blip.style.display = 'block';
+          const blip = this.blipPool[activeBlipIndex];
+          const st = blipState[activeBlipIndex];
+          activeBlipIndex++;
+          // Dirty-check: skip the write when the blip has not visibly moved.
+          const leftKey = Math.round(pixelX * 2) / 2; // 0.5px granularity
+          if (st.left !== leftKey) {
+            st.left = leftKey;
+            blip.style.left = `${pixelX}px`;
+          }
+          if (!st.shown) {
+            st.shown = true;
+            blip.style.display = 'block';
+          }
         }
       }
     }
 
-    // Hide remaining unused blips in pool
+    // Hide remaining unused blips in pool (only when they were visible)
     for (let i = activeBlipIndex; i < this.blipPool.length; i++) {
-      this.blipPool[i].style.display = 'none';
+      const st = blipState[i];
+      if (st.shown) {
+        st.shown = false;
+        this.blipPool[i].style.display = 'none';
+      }
     }
   }
 }

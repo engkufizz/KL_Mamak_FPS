@@ -1,5 +1,15 @@
 import * as THREE from 'three';
 
+// Reusable scratch vectors — the steering/separation code runs for every enemy
+// on every frame, so allocating here caused heavy GC churn (visible as periodic
+// stutter with a large horde). These are module-scoped because the values are
+// consumed immediately, before another enemy's update runs.
+const _toPlayer = new THREE.Vector3();
+const _steer = new THREE.Vector3();
+const _flankDir = new THREE.Vector3();
+const _separation = new THREE.Vector3();
+const _diff = new THREE.Vector3();
+
 export class Enemy {
   constructor(scene, type, spawnPos, audioManager, waveNumber = 1) {
     this.scene = scene;
@@ -370,25 +380,25 @@ export class Enemy {
     }
 
     // 2. Navigation Steering & Flocking towards Player
-    const toPlayer = playerPos.clone().sub(this.position);
+    const toPlayer = _toPlayer.subVectors(playerPos, this.position);
     toPlayer.y = 0;
     const distToPlayer = toPlayer.length();
 
     // Desired steering direction
-    let steer = toPlayer.clone().normalize();
+    const steer = _steer.copy(toPlayer).normalize();
 
     // Flank offset: rusher and enforcers fan out sideways
     if (distToPlayer > 4.0) {
-      const flankDir = new THREE.Vector3(-steer.z, 0, steer.x).multiplyScalar(this.flankAngle);
+      const flankDir = _flankDir.set(-steer.z, 0, steer.x).multiplyScalar(this.flankAngle);
       steer.add(flankDir.multiplyScalar(0.45)).normalize();
     }
 
     // Flocking Separation: Push away from nearby horde members
-    const separation = new THREE.Vector3();
+    const separation = _separation.set(0, 0, 0);
     let neighborCount = 0;
     for (const other of otherEnemies) {
       if (other === this || !other.isAlive()) continue;
-      const diff = this.position.clone().sub(other.position);
+      const diff = _diff.subVectors(this.position, other.position);
       diff.y = 0;
       const d = diff.length();
       const sepDist = this.radius + other.radius + 0.35;

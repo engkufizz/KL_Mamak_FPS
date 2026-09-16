@@ -120,16 +120,54 @@ class Game {
     // Apply auto-detected hardware profile
     this.setQuality(this.engine.quality);
 
+    // Pre-compile every shader in the scene up-front. Without this, the first
+    // shot / first enemy of each type triggered a shader compile mid-game,
+    // which shows up as a one-off freeze while playing.
+    this.prewarmShaders();
+
     this.lastTime = performance.now();
     this.setupEvents();
   }
 
+  // Compile scene shaders (and the weapon viewmodel) during loading so gameplay
+  // never stalls on program compilation.
+  prewarmShaders() {
+    try {
+      const renderer = this.engine.renderer;
+      const scene = this.engine.scene;
+      const camera = this.engine.camera;
+      if (!renderer || !scene || !camera || typeof renderer.compile !== 'function') return;
+      renderer.compile(scene, camera);
+      // Weapons are parented to the camera and only appear once equipped —
+      // compile each one so equipping never hitches.
+      if (this.weaponManager && Array.isArray(this.weaponManager.weapons)) {
+        const previousVisibility = [];
+        this.weaponManager.weapons.forEach((w, i) => {
+          const root = w && (w.root || w.group);
+          if (!root) return;
+          previousVisibility.push([root, root.visible]);
+          root.visible = true;
+        });
+        renderer.compile(scene, camera);
+        previousVisibility.forEach(([root, visible]) => { root.visible = visible; });
+      }
+    } catch (e) {
+      // Pre-warm is best-effort — never let it break the boot sequence.
+      console.warn('Shader pre-warm skipped:', e && e.message);
+    }
+  }
+
+  // Reused buffer: this is called on every shot, so building a fresh array each
+  // time produced avoidable garbage during heavy firefights.
   getTargetables() {
-    return [
-      ...this.hordeManager.getTargetables(),
-      ...this.propManager.getPropMeshes(),
-      ...this.staticTargetables
-    ];
+    const out = this._targetablesBuffer || (this._targetablesBuffer = []);
+    out.length = 0;
+    const hordeTargets = this.hordeManager.getTargetables();
+    for (let i = 0; i < hordeTargets.length; i++) out.push(hordeTargets[i]);
+    const propMeshes = this.propManager.getPropMeshes();
+    for (let i = 0; i < propMeshes.length; i++) out.push(propMeshes[i]);
+    for (let i = 0; i < this.staticTargetables.length; i++) out.push(this.staticTargetables[i]);
+    return out;
   }
 
   setQuality(quality) {

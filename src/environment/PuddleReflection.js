@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { PuddleShader } from '../shaders/puddleShader.js';
 
+// Scratch vectors for the per-frame reflection camera math (see update()).
+const _viewScratch = new THREE.Vector3();
+const _targetScratch = new THREE.Vector3();
+
 export class PuddleReflection {
   constructor(renderer, scene, groundMesh) {
     this.renderer = renderer;
@@ -180,7 +184,9 @@ export class PuddleReflection {
     this.rotationMatrix.extractRotation(this.groundMesh.matrixWorld);
     this.normal.set(0, 1, 0).applyMatrix4(this.rotationMatrix);
 
-    const view = this.reflectorWorldPosition.clone().sub(this.cameraWorldPosition);
+    // Scratch vectors reused each frame (this pass runs every frame; the clones
+    // here added constant garbage). Values are consumed within this call.
+    const view = _viewScratch.copy(this.reflectorWorldPosition).sub(this.cameraWorldPosition);
     if (view.dot(this.normal) > 0) return; // Behind reflector
 
     view.reflect(this.normal).negate();
@@ -190,7 +196,7 @@ export class PuddleReflection {
     this.lookAtPosition.set(0, 0, -1).applyMatrix4(this.rotationMatrix);
     this.lookAtPosition.add(this.cameraWorldPosition);
 
-    const target = this.reflectorWorldPosition.clone().sub(this.lookAtPosition);
+    const target = _targetScratch.copy(this.reflectorWorldPosition).sub(this.lookAtPosition);
     target.reflect(this.normal).negate();
     target.add(this.reflectorWorldPosition);
 

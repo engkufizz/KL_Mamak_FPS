@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { toggleFullScreen, onFullScreenChange } from '../utils/fullscreen.js';
 
+// Scratch vectors for the per-frame aim-assist scan (was allocating one Vector3
+// per enemy per frame -> GC stutter with a big horde).
+const _aimToEnemy = new THREE.Vector3();
+const _aimToTarget = new THREE.Vector3();
+
 /**
  * MobileControls - AAA Touch Controls for Mobile / Tablet WebGL FPS.
  * Features:
@@ -838,10 +843,15 @@ export class MobileControls {
 
   update(weaponManager, player, hordeManager, delta = 0.016, time = 0, targetables = [], hud = null, gameState = null) {
     if (weaponManager) {
-      this.wepPills.forEach((pill, idx) => {
-        if (idx === weaponManager.currentSlot) pill.classList.add('active');
-        else pill.classList.remove('active');
-      });
+      // Only touch the DOM when the active slot actually changes (this used to
+      // write classList for every pill on every frame).
+      if (this._lastPillSlot !== weaponManager.currentSlot) {
+        this._lastPillSlot = weaponManager.currentSlot;
+        this.wepPills.forEach((pill, idx) => {
+          if (idx === weaponManager.currentSlot) pill.classList.add('active');
+          else pill.classList.remove('active');
+        });
+      }
     }
 
     if (player && hordeManager) {
@@ -857,7 +867,9 @@ export class MobileControls {
 
         for (const enemy of enemies) {
           if (!enemy || enemy.health <= 0) continue;
-          const toEnemy = enemy.position.clone().add(new THREE.Vector3(0, enemy.height * 0.55, 0)).sub(cam.position);
+          const toEnemy = _aimToEnemy
+            .set(enemy.position.x, enemy.position.y + enemy.height * 0.55, enemy.position.z)
+            .sub(cam.position);
           const dist = toEnemy.length();
           if (dist > 40 || dist < 1.0) continue;
           toEnemy.normalize();
@@ -872,7 +884,9 @@ export class MobileControls {
           this.isAimFrictionActive = true;
 
           // Subtle aim magnetism pull when aiming or moving
-          const toTarget = bestTarget.position.clone().add(new THREE.Vector3(0, bestTarget.height * 0.55, 0)).sub(cam.position);
+          const toTarget = _aimToTarget
+            .set(bestTarget.position.x, bestTarget.position.y + bestTarget.height * 0.55, bestTarget.position.z)
+            .sub(cam.position);
           const desiredYaw = Math.atan2(toTarget.x, -toTarget.z);
           let diffYaw = desiredYaw - player.yaw;
           diffYaw = Math.atan2(Math.sin(diffYaw), Math.cos(diffYaw));

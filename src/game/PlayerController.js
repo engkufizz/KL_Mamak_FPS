@@ -1,5 +1,12 @@
 import * as THREE from 'three';
 
+// Scratch objects reused every frame (avoids per-frame garbage collection
+// pauses). Values are consumed within a single update() call.
+const _camEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+const _forward = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _targetVelocity = new THREE.Vector3();
+
 export class PlayerController {
   constructor(camera, colliders, audioManager) {
     this.camera = camera;
@@ -55,7 +62,8 @@ export class PlayerController {
 
     // Apply rotation to camera
     this.camera.rotation.set(0, 0, 0);
-    this.camera.quaternion.setFromEuler(new THREE.Euler(finalPitch, this.yaw, 0, 'YXZ'));
+    _camEuler.set(finalPitch, this.yaw, 0, 'YXZ');
+    this.camera.quaternion.setFromEuler(_camEuler);
 
     // 2. Movement Direction relative to camera yaw
     const keyMove = inputManager.getMovementVector();
@@ -82,10 +90,10 @@ export class PlayerController {
     const currentSpeed = this.isSprinting ? this.sprintSpeed : this.walkSpeed;
 
     // Forward & Right vectors along horizontal plane
-    const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)).normalize();
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).normalize();
+    const forward = _forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)).normalize();
+    const right = _right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).normalize();
 
-    const targetVelocity = new THREE.Vector3();
+    const targetVelocity = _targetVelocity.set(0, 0, 0);
     targetVelocity.addScaledVector(forward, moveForward);
     targetVelocity.addScaledVector(right, moveRight);
     if (targetVelocity.lengthSq() > 0.001) {
