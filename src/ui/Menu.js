@@ -321,7 +321,7 @@ export class Menu {
   setQuality(quality) {
     this.quality = quality;
     const labelMap = {
-      performance: '⚡ PERF: FAST (ORANGE PI)',
+      performance: '⚡ PERF: FAST',
       balanced: '⚡ PERF: BALANCED (60 FPS)',
       high: '⚡ PERF: ULTRA (MAX EFFECTS)'
     };
