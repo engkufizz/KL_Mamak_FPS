@@ -2,7 +2,7 @@
 
 > **⚠️ Server/tunnel are managed automatically.** A watchdog (Hermes cron, every 5 min)
 > keeps the Vite dev server (port 5180) and the public tunnel
-> (https://klmamakfps.loophole.site) alive. **Do not run `npm run dev` or any tunnel
+> (https://mamakfps.loophole.site) alive. **Do not run `npm run dev` or any tunnel
 > command** — edit files instead (Vite hot-reloads instantly). See `GEMINI.md` section 0.
 
 

@@ -18,7 +18,7 @@ This document provides complete architectural context, design invariants, codeba
 ### Correct way to work on this project
 
 - **Edit source files only** (`src/**`, `index.html`, `public/**`, `vite.config.js`). The running Vite dev server **hot-reloads instantly** — no restart needed. Save the file, refresh the browser.
-- **Test the game at the live URL**: **https://klmamakfps.loophole.site** (or `http://localhost:5180` from inside the box).
+- **Test the game at the live URL**: **https://mamakfps.loophole.site** (or `http://localhost:5180` from inside the box).
 - **Verify the server is alive** (read-only, always safe): `curl -s -o /dev/null -w "%{http_code}" http://localhost:5180/` → expect `200`.
 - **If port 5180 does not answer**: report it to the user and stop. Do not start a server on another port — the tunnel only forwards 5180.
 - **Do not run `npm install`** unless explicitly asked; dependencies are already installed.
