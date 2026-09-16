@@ -10,14 +10,15 @@ export class PostProcessing {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Render targets
+    // Render targets with UnsignedByteType for maximum bandwidth efficiency on mobile/SBC GPUs
     const rtParams = {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
       format: THREE.RGBAFormat,
-      type: THREE.HalfFloatType
+      type: THREE.UnsignedByteType
     };
 
+    this.enabled = true;
     this.sceneTarget = new THREE.WebGLRenderTarget(width, height, rtParams);
     this.brightTarget = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2), rtParams);
     this.blurTargetH = new THREE.WebGLRenderTarget(Math.floor(width / 4), Math.floor(height / 4), rtParams);
@@ -72,7 +73,13 @@ export class PostProcessing {
     this.updateDimensions(width, height);
   }
 
+  setQuality(quality) {
+    // In performance mode, completely bypass post-processing for 60 FPS on Orange Pi / low-spec devices
+    this.enabled = (quality !== 'performance');
+  }
+
   updateDimensions(width, height) {
+    if (!this.enabled) return;
     this.sceneTarget.setSize(width, height);
     this.brightTarget.setSize(Math.floor(width / 2), Math.floor(height / 2));
     this.blurTargetH.setSize(Math.floor(width / 4), Math.floor(height / 4));
@@ -87,6 +94,12 @@ export class PostProcessing {
   }
 
   render(time, damageVignette = 0.0, lowHealth = 0.0) {
+    if (!this.enabled) {
+      // Direct forward render: 0 extra render passes, 0 blurs, 0 offscreen framebuffers!
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
     // 1. Render primary scene into sceneTarget
     this.renderer.setRenderTarget(this.sceneTarget);
     this.renderer.clear();

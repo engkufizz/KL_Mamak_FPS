@@ -1,9 +1,11 @@
 import { requestFullScreen, toggleFullScreen, isFullScreen, onFullScreenChange } from '../utils/fullscreen.js';
 
 export class Menu {
-  constructor(onStartGame, onRestartGame) {
+  constructor(onStartGame, onRestartGame, onQualityChange = null) {
     this.onStartGame = onStartGame;
     this.onRestartGame = onRestartGame;
+    this.onQualityChange = onQualityChange;
+    this.quality = 'balanced';
 
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -215,6 +217,7 @@ export class Menu {
         <div class="btn-group">
           <button id="btn-start" class="btn-play" style="margin-bottom: 0;">${this.isTouchDevice ? 'START PATROL (TAP TO PLAY)' : 'START PATROL (LOCK MOUSE)'}</button>
           <button id="btn-start-fs" class="btn-secondary" title="Toggle Fullscreen">⛶ FULLSCREEN</button>
+          <button id="btn-start-quality" class="btn-secondary" title="Toggle Graphics Quality">⚡ PERF: BALANCED</button>
         </div>
 
         <div class="controls-card" id="controls-container">
@@ -249,6 +252,7 @@ export class Menu {
         <div class="btn-group">
           <button id="btn-resume" class="btn-play" style="margin-bottom: 0;">RESUME COMBAT</button>
           <button id="btn-pause-fs" class="btn-secondary">⛶ FULLSCREEN</button>
+          <button id="btn-pause-quality" class="btn-secondary" title="Toggle Graphics Quality">⚡ PERF: BALANCED</button>
         </div>
         <button id="btn-pause-restart" class="btn-play" style="background: #2a3544; color: #00ffcc; box-shadow: 0 0 15px rgba(0,255,204,0.3); font-size: clamp(14px, 3vw, 18px); padding: 10px 28px;">RESTART MISSION</button>
       </div>
@@ -280,6 +284,7 @@ export class Menu {
         <div class="btn-group">
           <button id="btn-restart" class="btn-play" style="background: #ff2244; box-shadow: 0 0 25px rgba(255, 34, 68, 0.7); color: #fff; margin-bottom: 0;">MAIN SEMULA / RETRY</button>
           <button id="btn-go-fs" class="btn-secondary" style="border-color: rgba(255, 34, 68, 0.6); color: #ff6688; box-shadow: 0 0 15px rgba(255, 34, 68, 0.3);">⛶ FULLSCREEN</button>
+          <button id="btn-go-quality" class="btn-secondary" style="border-color: rgba(255, 34, 68, 0.6); color: #ff6688; box-shadow: 0 0 15px rgba(255, 34, 68, 0.3);" title="Toggle Graphics Quality">⚡ PERF: BALANCED</button>
         </div>
         <div class="ios-tip">💡 Tip: Tap <b>⛶ FULLSCREEN</b> for full screen. (On iPhone Safari: Tap Share ➔ 'Add to Home Screen' or 'aA' ➔ 'Hide Toolbar')</div>
       </div>
@@ -300,12 +305,40 @@ export class Menu {
     this.btnPauseFs = this.container.querySelector('#btn-pause-fs');
     this.btnGoFs = this.container.querySelector('#btn-go-fs');
 
+    this.btnStartQuality = this.container.querySelector('#btn-start-quality');
+    this.btnPauseQuality = this.container.querySelector('#btn-pause-quality');
+    this.btnGoQuality = this.container.querySelector('#btn-go-quality');
+
     this.goScore = this.container.querySelector('#go-score');
     this.goWave = this.container.querySelector('#go-wave');
     this.goKills = this.container.querySelector('#go-kills');
     this.goHeadshots = this.container.querySelector('#go-headshots');
 
     this.setupListeners();
+    this.setQuality(this.quality);
+  }
+
+  setQuality(quality) {
+    this.quality = quality;
+    const labelMap = {
+      performance: '⚡ PERF: FAST (ORANGE PI)',
+      balanced: '⚡ PERF: BALANCED (60 FPS)',
+      high: '⚡ PERF: ULTRA (MAX EFFECTS)'
+    };
+    const label = labelMap[quality] || '⚡ PERF: BALANCED';
+    if (this.btnStartQuality) this.btnStartQuality.textContent = label;
+    if (this.btnPauseQuality) this.btnPauseQuality.textContent = label;
+    if (this.btnGoQuality) this.btnGoQuality.textContent = label;
+  }
+
+  cycleQuality() {
+    const qualities = ['performance', 'balanced', 'high'];
+    const nextIdx = (qualities.indexOf(this.quality) + 1) % qualities.length;
+    const nextQuality = qualities[nextIdx];
+    this.setQuality(nextQuality);
+    if (typeof this.onQualityChange === 'function') {
+      this.onQualityChange(nextQuality);
+    }
   }
 
   setupListeners() {
@@ -318,6 +351,18 @@ export class Menu {
       if (btn) {
         btn.addEventListener('touchstart', handleToggleFs, { passive: false });
         btn.addEventListener('click', handleToggleFs);
+      }
+    });
+
+    const handleCycleQuality = (e) => {
+      if (e && e.cancelable) e.preventDefault();
+      this.cycleQuality();
+    };
+
+    [this.btnStartQuality, this.btnPauseQuality, this.btnGoQuality].forEach((btn) => {
+      if (btn) {
+        btn.addEventListener('touchstart', handleCycleQuality, { passive: false });
+        btn.addEventListener('click', handleCycleQuality);
       }
     });
 

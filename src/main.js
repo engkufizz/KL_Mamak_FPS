@@ -82,7 +82,8 @@ class Game {
       this.player,
       this.weaponManager,
       this.inputManager,
-      () => this.pauseGame()
+      () => this.pauseGame(),
+      (q) => this.setQuality(q)
     );
 
     // Horde Director
@@ -95,16 +96,51 @@ class Game {
       this.hud
     );
 
+    // Pre-cache static environment collision / hit targets
+    this.staticTargetables = [
+      ...this.alleyway.group.children,
+      ...this.mamakStall.stallGroup.children
+    ];
+
+    // Exclude particle systems from planar puddle reflection pass to prevent double-draw
+    this.puddleReflection.setExcludedMeshes([
+      this.weather.rainSystem,
+      this.bulletManager.sparkPoints
+    ]);
+
     // UI Menus
     this.isPlaying = false;
     this.isPaused = false;
     this.menu = new Menu(
       () => this.startGame(),
-      () => this.restartGame()
+      () => this.restartGame(),
+      (q) => this.setQuality(q)
     );
+
+    // Apply auto-detected hardware profile
+    this.setQuality(this.engine.quality);
 
     this.lastTime = performance.now();
     this.setupEvents();
+  }
+
+  getTargetables() {
+    return [
+      ...this.hordeManager.getTargetables(),
+      ...this.propManager.getPropMeshes(),
+      ...this.staticTargetables
+    ];
+  }
+
+  setQuality(quality) {
+    this.quality = quality;
+    if (this.engine) this.engine.setQuality(quality);
+    if (this.postProcessing) this.postProcessing.setQuality(quality);
+    if (this.puddleReflection) this.puddleReflection.setQuality(quality);
+    if (this.weather) this.weather.setQuality(quality);
+    if (this.alleyway) this.alleyway.setQuality(quality);
+    if (this.menu) this.menu.setQuality(quality);
+    if (this.mobileControls) this.mobileControls.setQuality(quality);
   }
 
   setupEvents() {
@@ -252,15 +288,7 @@ class Game {
         : this.inputManager.isMouseJustPressed(0);
 
       if (wantsFire) {
-        // Collect targetable enemy meshes, props, and environment surfaces for raycast detection
-        const targetables = [
-          ...this.hordeManager.getTargetables(),
-          ...this.propManager.props.map(p => p.mesh),
-          ...this.alleyway.group.children,
-          ...this.mamakStall.stallGroup.children
-        ];
-
-        this.weaponManager.tryFire(time, targetables, this.hud, this.gameState);
+        this.weaponManager.tryFire(time, this.getTargetables(), this.hud, this.gameState);
       }
 
       // 2. Update Player Movement & Camera
@@ -314,19 +342,13 @@ class Game {
       // 7. Update HUD & Mobile Controls (Aim Assist, Auto-Fire, Movement)
       this.hud.update(this.gameState, this.weaponManager, this.player, this.hordeManager.enemies);
 
-      const targetables = [
-        ...this.hordeManager.getTargetables(),
-        ...this.propManager.props.map(p => p.mesh),
-        ...this.alleyway.group.children,
-        ...this.mamakStall.stallGroup.children
-      ];
       this.mobileControls.update(
         this.weaponManager,
         this.player,
         this.hordeManager,
         delta,
         time,
-        targetables,
+        () => this.getTargetables(),
         this.hud,
         this.gameState
       );

@@ -64,6 +64,19 @@ export class HUD {
           opacity: 0;
           transition: opacity 0.15s ease-out;
         }
+
+        /* Lightweight CSS Damage Flash & Low-Health Vignette (0 GPU WebGL overhead in Performance Mode) */
+        #damage-vignette-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          box-shadow: inset 0 0 100px rgba(255, 0, 0, 0);
+          transition: opacity 0.08s ease-out;
+          opacity: 0;
+        }
         #damage-arc {
           position: absolute;
           width: 100%;
@@ -424,6 +437,8 @@ export class HUD {
         <div class="ch-dot"></div>
       </div>
 
+      <div id="damage-vignette-overlay"></div>
+
       <div id="damage-ring">
         <div id="damage-arc"></div>
       </div>
@@ -508,6 +523,7 @@ export class HUD {
     this.announceBannerEl = this.container.querySelector('#announcement-banner');
     this.announceMainEl = this.container.querySelector('#announce-main');
     this.announceSubEl = this.container.querySelector('#announce-sub');
+    this.damageVignetteEl = this.container.querySelector('#damage-vignette-overlay');
     this.damageRingEl = this.container.querySelector('#damage-ring');
     this.damageArcEl = this.container.querySelector('#damage-arc');
     this.pickupNotifyEl = this.container.querySelector('#pickup-notify');
@@ -596,6 +612,19 @@ export class HUD {
 
   update(gameState, weaponManager, playerController, enemies = []) {
     if (!gameState || !weaponManager) return;
+
+    // Low health pulse + damage vignette overlay (gives visual feedback with 0 WebGL overhead in Performance Mode)
+    if (this.damageVignetteEl) {
+      const dmg = gameState.damageVignette || 0;
+      const lowHp = typeof gameState.getLowHealthFactor === 'function' ? gameState.getLowHealthFactor() : 0;
+      const totalIntensity = Math.min(1.0, dmg * 1.2 + lowHp * 0.6);
+      if (totalIntensity > 0.02) {
+        this.damageVignetteEl.style.opacity = `${totalIntensity}`;
+        this.damageVignetteEl.style.boxShadow = `inset 0 0 ${Math.round(50 + totalIntensity * 70)}px rgba(255, 20, 40, ${0.4 + totalIntensity * 0.5})`;
+      } else {
+        this.damageVignetteEl.style.opacity = '0';
+      }
+    }
 
     // Vitals
     const hpPct = Math.max(0, Math.min(100, (gameState.health / gameState.maxHealth) * 100));

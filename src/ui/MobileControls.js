@@ -15,11 +15,13 @@ import { toggleFullScreen, onFullScreenChange } from '../utils/fullscreen.js';
  * - Responsive Orientation Advisory Overlay (portrait to landscape prompt)
  */
 export class MobileControls {
-  constructor(playerController, weaponManager, inputManager, onPauseCallback = null) {
+  constructor(playerController, weaponManager, inputManager, onPauseCallback = null, onQualityChange = null) {
     this.player = playerController;
     this.weapons = weaponManager;
     this.input = inputManager;
     this.onPause = onPauseCallback;
+    this.onQualityChange = onQualityChange;
+    this.quality = 'balanced';
 
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.enabled = this.isTouchDevice;
@@ -321,6 +323,7 @@ export class MobileControls {
         <div class="mob-top-group">
           <button class="mob-icon-btn" id="btn-mob-pause" title="Pause Game">⏸</button>
           <button class="mob-icon-btn" id="btn-mob-fullscreen" title="Full Screen">⛶</button>
+          <button class="mob-pill-btn" id="btn-mob-quality" title="Graphics Quality">⚡ BAL</button>
         </div>
         <div class="mob-top-group">
           <button class="mob-pill-btn" id="btn-mob-autofire">AUTO-FIRE: OFF</button>
@@ -369,6 +372,7 @@ export class MobileControls {
     this.btnSprint = this.container.querySelector('#btn-mob-sprint');
     this.btnPause = this.container.querySelector('#btn-mob-pause');
     this.btnFullscreen = this.container.querySelector('#btn-mob-fullscreen');
+    this.btnQuality = this.container.querySelector('#btn-mob-quality');
     this.btnAutoFire = this.container.querySelector('#btn-mob-autofire');
 
     this.wepPills = [
@@ -760,6 +764,48 @@ export class MobileControls {
     };
     this.btnAutoFire.addEventListener('touchstart', toggleAutoFire, { passive: false });
     this.btnAutoFire.addEventListener('click', toggleAutoFire);
+
+    // 13. Quality Toggle Pill
+    const handleCycleQuality = (e) => {
+      if (e && e.cancelable) e.preventDefault();
+      this.cycleQuality();
+    };
+    if (this.btnQuality) {
+      this.btnQuality.addEventListener('touchstart', handleCycleQuality, { passive: false });
+      this.btnQuality.addEventListener('click', handleCycleQuality);
+    }
+  }
+
+  setQuality(quality) {
+    this.quality = quality;
+    const labelMap = {
+      performance: '⚡ PERF',
+      balanced: '⚡ BAL',
+      high: '⚡ HIGH'
+    };
+    if (this.btnQuality) {
+      this.btnQuality.textContent = labelMap[quality] || '⚡ BAL';
+      if (quality === 'performance') {
+        this.btnQuality.style.color = '#00ffcc';
+        this.btnQuality.style.borderColor = '#00ffcc';
+      } else if (quality === 'high') {
+        this.btnQuality.style.color = '#ffaa00';
+        this.btnQuality.style.borderColor = '#ffaa00';
+      } else {
+        this.btnQuality.style.color = '#88bbdd';
+        this.btnQuality.style.borderColor = 'rgba(0, 255, 204, 0.35)';
+      }
+    }
+  }
+
+  cycleQuality() {
+    const qualities = ['performance', 'balanced', 'high'];
+    const nextIdx = (qualities.indexOf(this.quality) + 1) % qualities.length;
+    const nextQuality = qualities[nextIdx];
+    this.setQuality(nextQuality);
+    if (typeof this.onQualityChange === 'function') {
+      this.onQualityChange(nextQuality);
+    }
   }
 
   triggerSnapOnAds() {
@@ -841,7 +887,8 @@ export class MobileControls {
             const activeWeapon = weaponManager.getActiveWeapon();
             if (activeWeapon && !activeWeapon.isReloading && (time - this.lastAutoFireTime > 0.08)) {
               this.lastAutoFireTime = time;
-              weaponManager.tryFire(time, targetables, hud, gameState);
+              const targets = typeof targetables === 'function' ? targetables() : (targetables || []);
+              weaponManager.tryFire(time, targets, hud, gameState);
             }
           }
         } else {

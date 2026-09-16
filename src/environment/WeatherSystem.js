@@ -5,7 +5,8 @@ export class WeatherSystem {
     this.scene = scene;
     this.audioManager = audioManager;
 
-    this.rainCount = 3500;
+    this.maxRainCount = 1800;
+    this.rainCount = 1200; // Balanced default (saves 65% CPU loop & WebGL bandwidth compared to 3500)
     this.rainGeometry = null;
     this.rainMaterial = null;
     this.rainSystem = null;
@@ -22,14 +23,14 @@ export class WeatherSystem {
   }
 
   initRain() {
-    const rainPositions = new Float32Array(this.rainCount * 6); // 2 vertices per line streak
-    const rainVelocities = new Float32Array(this.rainCount);
+    const rainPositions = new Float32Array(this.maxRainCount * 6); // 2 vertices per line streak
+    const rainVelocities = new Float32Array(this.maxRainCount);
 
     const boundsX = 50;
     const boundsZ = 60;
     const height = 30;
 
-    for (let i = 0; i < this.rainCount; i++) {
+    for (let i = 0; i < this.maxRainCount; i++) {
       const x = (Math.random() - 0.5) * boundsX;
       const y = Math.random() * height;
       const z = (Math.random() - 0.5) * boundsZ;
@@ -50,6 +51,7 @@ export class WeatherSystem {
 
     this.rainGeometry = new THREE.BufferGeometry();
     this.rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+    this.rainGeometry.setDrawRange(0, this.rainCount * 2);
     this.rainVelocities = rainVelocities;
 
     this.rainMaterial = new THREE.LineBasicMaterial({
@@ -110,6 +112,19 @@ export class WeatherSystem {
     this.lightningTimer = 0;
     if (this.lightningLight) this.lightningLight.intensity = 0.0;
     if (this.ambientLight) this.ambientLight.intensity = 3.4;
+  }
+
+  setQuality(quality) {
+    if (quality === 'performance') {
+      this.rainCount = 600; // Orange Pi / Low-spec: 83% lighter CPU loop
+    } else if (quality === 'high') {
+      this.rainCount = 1800;
+    } else {
+      this.rainCount = 1200; // Balanced
+    }
+    if (this.rainGeometry) {
+      this.rainGeometry.setDrawRange(0, this.rainCount * 2);
+    }
   }
 
   update(delta, playerPos) {

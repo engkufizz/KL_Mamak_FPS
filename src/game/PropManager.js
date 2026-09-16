@@ -7,6 +7,11 @@ export class PropManager {
     this.props = [];
 
     this.initMamakFurniture();
+    this.propMeshes = this.props.map(p => p.mesh);
+  }
+
+  getPropMeshes() {
+    return this.propMeshes;
   }
 
   // Create the iconic Malaysian red plastic stool (with center hole!)

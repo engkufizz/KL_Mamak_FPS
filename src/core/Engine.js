@@ -11,11 +11,13 @@ export class Engine {
     this.scene.add(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: false,
       powerPreference: 'high-performance'
     });
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const pixelRatio = isTouch ? Math.min(window.devicePixelRatio, 1.6) : Math.min(window.devicePixelRatio, 2.0);
+
+    this.quality = this.detectDefaultQuality();
+    const pixelRatio = this.getDprForQuality(this.quality);
+
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -28,6 +30,47 @@ export class Engine {
     window.addEventListener('resize', this.onResize.bind(this));
   }
 
+  detectDefaultQuality() {
+    const saved = localStorage.getItem('kl_mamak_perf_profile');
+    if (saved) return saved;
+
+    try {
+      const gl = this.renderer.getContext();
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const rendererStr = (gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '').toLowerCase();
+        if (rendererStr.includes('mali') ||
+            rendererStr.includes('panfrost') ||
+            rendererStr.includes('llvmpipe') ||
+            rendererStr.includes('software') ||
+            rendererStr.includes('powervr')) {
+          return 'performance';
+        }
+      }
+    } catch (_) {}
+
+    if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) {
+      return 'performance';
+    }
+
+    return 'balanced';
+  }
+
+  getDprForQuality(q) {
+    if (q === 'performance') return Math.min(window.devicePixelRatio, 1.0);
+    if (q === 'high') return Math.min(window.devicePixelRatio, 1.5);
+    return Math.min(window.devicePixelRatio, 1.25); // balanced
+  }
+
+  setQuality(q) {
+    this.quality = q;
+    try {
+      localStorage.setItem('kl_mamak_perf_profile', q);
+    } catch (_) {}
+    const pr = this.getDprForQuality(q);
+    this.renderer.setPixelRatio(pr);
+  }
+
   onResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -35,8 +78,7 @@ export class Engine {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
 
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const pixelRatio = isTouch ? Math.min(window.devicePixelRatio, 1.6) : Math.min(window.devicePixelRatio, 2.0);
+    const pixelRatio = this.getDprForQuality(this.quality);
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
 

@@ -496,4 +496,12 @@ export class AlleywayBuilder {
   getSpawnPoints() {
     return this.spawnPoints;
   }
+
+  setQuality(quality) {
+    // In performance mode, cull 7 auxiliary sign point lights to drastically reduce forward fragment shader load on Orange Pi
+    const enableSignLights = (quality !== 'performance');
+    for (let i = 0; i < this.neonLights.length; i++) {
+      this.neonLights[i].visible = enableSignLights;
+    }
+  }
 }
